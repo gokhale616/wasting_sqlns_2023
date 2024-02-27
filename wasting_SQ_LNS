@@ -1,0 +1,54 @@
+library(deSolve)
+library(dplyr)
+library(zoo)
+library(purrr)
+
+wasting_model_SQ_LNS <- function (t, x, params) {
+  with(
+    as.list(c(x,params)),
+    {
+      
+      # Seasonality in wasting rates 
+      beta = beta0*(1+beta1*cos(2*pi*t))
+      sigma = sigma0*(1+beta1*cos(2*pi*t))
+      
+      # compartments for when a proportion receiving SQ-LNS 
+      dB.NW = - (omega + mu)*B.NW
+      dB.MW = - (omega + (1+alpha)*mu)*B.MW
+      dB.sl = rho*omega*B.NW + gamma*MW.ut.sl + chi2*SW.ut.sl - (eps*beta + theta*mu)*B.sl
+      dB.nsl = (1-rho)*omega*B.NW + gamma*MW.ut.nsl + chi2*SW.ut.nsl - (eps*beta + mu)*B.nsl
+      dMW.ut.sl = rho*omega*B.MW + eps*beta*B.sl + chi1*SW.ut.sl + phi*SW.t.sl - (gamma + eta*sigma + (1+alpha)*theta*mu)*MW.ut.sl
+      dMW.ut.nsl = (1-rho)*omega*B.MW + beta*B.nsl + chi1*SW.ut.nsl + phi*SW.t.nsl - (gamma + sigma + (1+alpha)*mu)*MW.ut.nsl
+      dSW.ut.sl = eta*sigma*MW.ut.sl + k*nu*SW.t.sl - (chi1 + chi2 + k*zeta + (1+iota)*theta*mu)*SW.ut.sl
+      dSW.ut.nsl = sigma*MW.ut.nsl + k*nu*SW.t.nsl - (chi1 + chi2 + k*zeta + (1+iota)*mu)*SW.ut.nsl
+      dSW.t.sl = k*zeta*SW.ut.sl - (phi + k*nu + (1+iota)*theta*mu)*SW.t.sl
+      dSW.t.nsl = k*zeta*SW.ut.nsl - (phi + k*nu + (1+iota)*mu)*SW.t.nsl
+
+
+      dMW.ut.sl_inc = eps*beta*B.sl
+      dMW.ut.nsl_inc = beta*B.nsl
+      dSW.ut.sl_inc = eta*sigma*MW.ut.sl  
+      dSW.ut.nsl_inc = sigma*MW.ut.nsl  
+      dSW.t.sl_inc = k*zeta*SW.ut.sl  
+      dSW.t.nsl_inc = k*zeta*SW.ut.nsl  
+
+      dMW.ut.sl_die = (1+alpha)*theta*mu*MW.ut.sl
+      dMW.ut.nsl_die = (1+alpha)*theta*mu*MW.ut.nsl
+      dSW.ut.sl_die = (1+iota)*theta*mu*SW.ut.sl
+      dSW.ut.nsl_die = (1+iota)*mu*SW.ut.nsl
+      dSW.t.sl_die = (1+iota)*theta*mu*SW.t.sl
+      dSW.t.nsl_die = (1+iota)*mu*SW.t.nsl
+      
+      dall_die = mu*B.NW + mu*B.MW + mu*B.sl + mu*B.nsl + dMW.ut.sl_die +
+		    dMW.ut.nsl_die + dSW.ut.sl_die + dSW.ut.nsl_die +
+		     dSW.t.sl_die + dSW.t.nsl_die
+
+      dx <- c(dB.NW,dB.MW,dB.sl,dB.nsl,dB.MW.ut.sl,dB.MW.ut.nsl,dB.SW.ut.sl,dB.SW.ut.nsl, 
+		dB.SW.t.nsl, dB.SW.t.sl, dMW.ut.sl_inc, dMW.ut.nsl_inc, dSW.ut.sl_inc,
+		dSW.ut.nsl_inc,dSW.t.sl_inc,dSW.t.nsl_inc,dMW.ut.sl_die,dMW.ut.nsl_die,
+		dSW.ut.sl_die,dSW.ut.nsl_die,dSW.t.sl_die,dSW.t.nsl_die,dall_die)
+      list(dx) 
+    }
+  )
+}
+
